@@ -10,12 +10,13 @@ export async function createPgConnection(db = "") {
                 host: process.env.POSTGRESS_HOST,
                 port: Number(process.env.POSTGRESS_PORT),
                 database: process.env.POSTGRESS_DATABASE_NAME,
+                ssl:true
             });
         await client.connect();
         return client;
 
     } catch (err) {
-        console.log(err);
+        console.log(err,'ERRRRRRRRRRRRRRRRRRRRRRRRR');
         throw new Error(err);
 
     }
