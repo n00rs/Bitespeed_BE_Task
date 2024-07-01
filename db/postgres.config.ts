@@ -3,7 +3,6 @@ import { Client } from "pg";
 export async function createPgConnection(db = "") {
     try {
         const client = new Client(
-
             {
                 user: process.env.POSTGRESS_USER,
                 password: process.env.POSTGRESS_PASSWORD,
@@ -16,7 +15,6 @@ export async function createPgConnection(db = "") {
         return client;
 
     } catch (err) {
-        console.log(err,'ERRRRRRRRRRRRRRRRRRRRRRRRR');
         throw new Error(err);
 
     }

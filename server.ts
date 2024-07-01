@@ -15,9 +15,7 @@ app.post('/identify', async (req: Request, res: Response, next: NextFunction) =>
         const { email, phoneNumber } = req.body;
         const objContactDetails = await identityReconciliation({ email, phoneNumber });
         res.status(200).json({ contact: objContactDetails });
-    } catch (err) {
-        console.log({err});
-        
+    } catch (err) {        
         next(err);
     }
 });

@@ -1,10 +1,10 @@
-CREATE TABLE Contact (
-    id SERIAL PRIMARY KEY,
-    phoneNumber VARCHAR(20),
-    email VARCHAR(50),
-    linkedId SMALLINT,
-    linkPrecedence VARCHAR(10) NOT NULL CHECK CONSTRAINT(LINKPRECEDENCE IN('secondary', 'primary')),
-    createdAt TIMESTAMP NOT NULL,
-    updateAt TIMESTAMP NOT NULL,
-    deletedAt TIMESTAMP DEFAULT NULL
+CREATE TABLE contact (
+  id SERIAL PRIMARY KEY,
+  phone_number VARCHAR(20) NULL,
+  email VARCHAR(100) NULL,
+  linked_id INTEGER NULL,
+  link_precedence VARCHAR(10) NULL CHECK(link_precedence IN ('secondary', 'primary')),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL
 );
