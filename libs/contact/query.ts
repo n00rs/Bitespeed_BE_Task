@@ -9,13 +9,7 @@ const objQueries = {
         c.link_precedence AS "linkPrecedence",
         c.created_at AS "createdAt"
         FROM contact c
-        LEFT JOIN contact S ON s.linked_id = c.id AND s.deleted_at IS NULL
---        WHERE c.deleted_at IS NULL AND (c.phone_number = $1 OR c.email = $2) 
-WHERE c.deleted_at IS NULL AND s.deleted_at IS NULL AND
-		
-((c.phone_number = $1 OR c.email = $2) OR
-  (s.phone_number = $1 OR s.email = $2)
-) 
+WHERE c.deleted_at IS NULL AND {WHERE}
 ORDER BY c.created_at DESC 
         `,
   },

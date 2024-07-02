@@ -16,22 +16,33 @@ async function identityReconciliation({
   const strPhoneNumber = phoneNumber?.toString().trim();
 
   // array to hold params f
-  const arrParams: string[] = [strPhoneNumber ?? null, strEmail ?? null];
+  let arrParams: string[] = [strPhoneNumber ?? null, strEmail ?? null];
 
   if (!strEmail && !strPhoneNumber)
     throw new Error("PLEASE_PROVIDE_AN_EMAIL_OR_PHONE_NUMBER");
+
   const objConnection = await createPgConnection();
   let objReturn: TobjResponse;
   try {
     await objConnection.query("BEGIN");
     // basic validations
     // getting contact data
-
-    const { rows: arrContact }: { rows: TobjSelectContact[] | any[] } =
-      await objConnection.query(
-        objQueries["objGet"]["strGetContactDetails"],
-        arrParams
-      );
+    let strReplaceKey = "(c.phone_number = $1 OR c.email = $2)";
+    if (!strEmail && strPhoneNumber) {
+      strReplaceKey = "(c.phone_number = $1)";
+      arrParams = [strPhoneNumber];
+    }
+    if (strEmail && !strPhoneNumber) {
+      strReplaceKey = "(c.email = $1)";
+      arrParams = [strEmail];
+    }
+    const strQuery = objQueries["objGet"]["strGetContactDetails"].replace(
+      /{WHERE}/g,
+      strReplaceKey
+    );
+    console.log(strQuery, arrParams);
+    const { rows: arrContact }: { rows: TobjSelectContact[] } =
+      await objConnection.query(strQuery, arrParams);
 
     // if no contact details exists in database insert new data
     if (!arrContact.length) {
@@ -59,13 +70,11 @@ async function identityReconciliation({
 
       arrContact.forEach((objContact) => {
         // if both email and phone is not same then create an new secondary contact
-        if (
-          !(
-            objContact["email"] === strEmail ||
-            objContact["phoneNumber"] === strPhoneNumber
-          )
-        )
-          blnNewSecondaryContact = true;
+        blnNewSecondaryContact =
+          (objContact["phoneNumber"] != strPhoneNumber &&
+            objContact.email == strEmail) ||
+          (objContact["phoneNumber"] == strPhoneNumber &&
+            objContact.email != strEmail);
 
         if (objContact["linkPrecedence"] === "secondary")
           arrSecondaryId.push(objContact["id"]);
@@ -77,7 +86,10 @@ async function identityReconciliation({
           objContact["phoneNumber"] && arrPhone.push(objContact["phoneNumber"]);
         }
       });
-
+      if (!objPrimaryContact) {
+        objPrimaryContact = arrContact[0];
+        arrSecondaryId.splice(0, 1);
+      }
       if (arrPrimaryContacts.length > 1) {
         // const objNewSecondary =
         const arrParams = ["secondary"];
@@ -92,7 +104,7 @@ async function identityReconciliation({
           );
           objPrimaryContact = arrPrimaryContacts[0];
           arrSecondaryId.push(arrPrimaryContacts[1]["id"]);
-          
+
           arrPrimaryContacts[1]["email"] &&
             arrEmails.push(arrPrimaryContacts[1]["email"]);
           arrPrimaryContacts[1]["phoneNumber"] &&
@@ -117,20 +129,21 @@ async function identityReconciliation({
       }
 
       // add new secondary contact
-      if (!arrEmails.includes(strEmail) && !arrPhone.includes(strPhoneNumber)) {
-        const { rows: arrReturned, rowCount: intInsertCount }: TobjInsertRes =
-          await objConnection.query(
-            objQueries["objCreate"]["strCreateNewContact"],
-            [strPhoneNumber, strEmail, "secondary", objPrimaryContact["id"]]
-          );
+      if (arrPrimaryContacts.length <= 1 && !blnNewSecondaryContact) {
+        const { rows: arrReturned }: TobjInsertRes = await objConnection.query(
+          objQueries["objCreate"]["strCreateNewContact"],
+          [strPhoneNumber, strEmail, "secondary", objPrimaryContact["id"]]
+        );
 
-        arrEmails.push(arrReturned?.[0]?.["email"]);
-        arrPhone.push(arrReturned?.[0]?.["phone_number"]);
+        arrReturned?.[0]?.["email"] &&
+          arrEmails.push(arrReturned?.[0]?.["email"]);
+        arrReturned?.[0]?.["phone_number"] &&
+          arrPhone.push(arrReturned?.[0]?.["phone_number"]);
         arrSecondaryId.push(arrReturned?.[0]?.["id"]);
       }
-      objPrimaryContact["email"] &&
+      objPrimaryContact?.["email"] &&
         arrEmails.unshift(objPrimaryContact["email"]);
-      objPrimaryContact["phoneNumber"] &&
+      objPrimaryContact?.["phoneNumber"] &&
         arrPhone.unshift(objPrimaryContact["phoneNumber"]);
       objReturn = {
         emails: [...new Set(arrEmails)],
@@ -138,7 +151,7 @@ async function identityReconciliation({
         primaryContatctId: objPrimaryContact["id"],
         secondaryContactIds: arrSecondaryId,
       };
-    } 
+    }
     await objConnection.query("COMMIT");
     return objReturn;
   } catch (err) {
