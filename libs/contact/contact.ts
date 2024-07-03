@@ -69,12 +69,7 @@ async function identityReconciliation({
       const arrSecondaryId = [];
 
       arrContact.forEach((objContact) => {
-        // if both email and phone is not same then create an new secondary contact
-        blnNewSecondaryContact =
-          (objContact["phoneNumber"] != strPhoneNumber &&
-            objContact.email == strEmail) ||
-          (objContact["phoneNumber"] == strPhoneNumber &&
-            objContact.email != strEmail);
+        
 
         if (objContact["linkPrecedence"] === "secondary")
           arrSecondaryId.push(objContact["id"]);
@@ -88,7 +83,7 @@ async function identityReconciliation({
       });
       if (!objPrimaryContact) {
         objPrimaryContact = arrContact[0];
-        arrSecondaryId.splice(0, 1);
+        arrSecondaryId.splice(0,1)
       }
       if (arrPrimaryContacts.length > 1) {
         // const objNewSecondary =
@@ -128,8 +123,18 @@ async function identityReconciliation({
         );
       }
 
+      console.log({ blnNewSecondaryContact });
+
+      blnNewSecondaryContact = arrContact.some(
+        (objContact) =>
+            (objContact["email"] === strEmail &&
+              objContact["phone_number"] === strPhoneNumber) ||
+            (objContact["email"] === strEmail && !strPhoneNumber) ||
+            (objContact["phone_number"] === strPhoneNumber && !strEmail)
+        );
+    
       // add new secondary contact
-      if (arrPrimaryContacts.length <= 1 && !blnNewSecondaryContact) {
+      if (blnNewSecondaryContact) {
         const { rows: arrReturned }: TobjInsertRes = await objConnection.query(
           objQueries["objCreate"]["strCreateNewContact"],
           [strPhoneNumber, strEmail, "secondary", objPrimaryContact["id"]]
